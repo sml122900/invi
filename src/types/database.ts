@@ -777,6 +777,33 @@ export type Database = {
         Args: { p_birth_year: number; p_gender: string }
         Returns: undefined
       }
+      update_profile: {
+        Args: {
+          p_height_cm?: number | null
+          p_region?: string | null
+          p_active_regions?: string[] | null
+          p_mbti?: string | null
+          p_face_type?: string | null
+          p_smoking?: string | null
+          p_drinking?: string | null
+          p_religion?: string | null
+          p_intro_prompts?: Json | null
+          p_tags?: string[] | null
+        }
+        Returns: Json
+      }
+      get_my_verifications: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      request_org_verification: {
+        Args: { p_email: string; p_type: string }
+        Returns: Json
+      }
+      confirm_org_verification: {
+        Args: { p_code: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

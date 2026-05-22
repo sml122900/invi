@@ -17,6 +17,32 @@
 
 ---
 
+## Security Definer RPC로 데이터 쓰기 경로 일원화
+
+**Problem**
+프로필 저장 시 클라이언트가 `profiles` 테이블을 직접 UPDATE하면 RLS 정책 우회·잘못된 값 삽입 등 서버 측 검증 공백이 생기고, 완성도(completeness) 계산 로직이 클라이언트에 분산되는 문제.
+
+**Action**
+`update_profile(...)` RPC를 `security definer`로 설계해 단일 진입점 확보. 전달된 필드만 `coalesce`로 partial update하고, enum 범위·답변 길이 등 검증과 completeness 재계산(8체크포인트, 0–100)을 RPC 내에서 원자적으로 처리. 클라이언트 코드에서 직접 INSERT/UPDATE 제거.
+
+**Result**
+프로필 쓰기 경로가 RPC 하나로 통일되어, 향후 검증 로직 변경 시 서버 파일 1개만 수정. `complete_onboarding`(Phase 0)·`update_profile`·`request/confirm_org_verification` 패턴이 일관되어 코드 리뷰 기준 명확해짐.
+
+---
+
+## 개발/프로덕션 모드 분기를 서버 GUC로 제어
+
+**Problem**
+이메일 인증 코드를 개발 중에 확인하려면 실제 메일 발송 없이 코드를 노출해야 하는데, 클라이언트 코드에 `__DEV__` 분기를 두면 번들에 개발 전용 로직이 남아 보안 리스크가 생김.
+
+**Action**
+PostgreSQL GUC(`app.dev_mode`)를 `supabase/seed.sql`에서 로컬 전용으로 설정. RPC가 `current_setting('app.dev_mode', true) = 'true'`일 때만 평문 코드를 반환하도록 서버 측에서 분기. 클라이언트는 응답에 `code` 필드가 있을 때만 화면에 노출 — 클라이언트 코드에 환경 조건 분기 없음.
+
+**Result**
+프로덕션 빌드에서 인증 코드 노출 경로가 서버 레벨에서 차단됨. seed.sql은 로컬 `db reset` 시에만 실행되어 프로덕션 DB에는 GUC가 존재하지 않는 구조로 개발/프로덕션 환경 분리 명확화.
+
+---
+
 ## 템플릿
 
 ### [소재 제목]
