@@ -58,6 +58,22 @@ Supabase Edge Function(Deno 런타임)을 검색 프록시로 도입. 키는 `su
 
 ---
 
+## NULL 시맨틱이 다른 두 도메인에 partial / replace 두 RPC 패턴을 분리 적용
+
+**Problem**
+프로필(`profiles`) 저장은 1A 에서 `update_profile(...)` RPC 의 `coalesce(p_x, x)` partial update 로 일원화했다. 그런데 1C 의 이상형(`ideal_types`) 에서는 NULL 자체가 "상관없음" 이라는 도메인 의미를 가져, 같은 partial 패턴을 그대로 쓰면 "흡연 상관없음으로 바꾸기" 같은 사용자 의도가 서버에 전달되지 않고 기존 값이 그대로 유지되는 버그가 생긴다. NULL 이 "값 없음" 인지 "도메인 값 = 상관없음" 인지 구분할 길이 인자 시그니처에 없다.
+
+**Action**
+RPC 패턴을 두 가지로 분리하고, 향후 새 테이블에 적용할 판단 기준을 결정 문서로 남김(`docs/decisions/ideal-types-replace-pattern.md`):
+- NULL 이 **"비어 있음"** 의미 → partial update (`coalesce`, 1A)
+- NULL 이 **"상관없음/없음"** 같은 도메인 값 → 전체 교체 (upsert + on conflict do update set excluded.*, 1C)
+`update_ideal_type` 은 후자로 구현하되, 잠금 컬럼(school/company/salary/paid_until) 은 `set` 목록에서 명시적으로 제외해 결제 연동 전까지 보존. 검증(범위/enum) 과 security definer + 본인만 호출 가능한 보안 모델은 1A 와 동일하게 유지해, 두 RPC 가 같은 보안 골격 위에서 시맨틱만 다르다는 구조를 만듦.
+
+**Result**
+사용자 의도가 DB 까지 손실 없이 전달되는 흐름 확보. 두 패턴의 사용 기준이 결정 문서로 명문화되어, 향후 새 RPC 추가 시 판단 비용 제거. 한 도메인에서 채택한 패턴을 다른 도메인에 무비판적으로 복제했다면 발생했을 잠재 버그(잠금 컬럼 우연한 덮어쓰기, 사용자 의도 손실)를 설계 단계에서 차단.
+
+---
+
 ## 템플릿
 
 ### [소재 제목]

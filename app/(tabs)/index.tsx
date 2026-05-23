@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { signOut } from '@/features/auth/api';
 import { useMyProfile, useMyVerifications } from '@/features/profile/hooks';
 import { useMyCourses, useMyAvailableTimes } from '@/features/courses/hooks';
 import { theme } from '@/theme';
@@ -15,12 +14,7 @@ export default function HomeScreen() {
   const { courses, loading: coursesLoading } = useMyCourses();
   const { times, loading: timesLoading } = useMyAvailableTimes();
 
-  async function handleSignOut() {
-    await signOut();
-    router.replace('/(auth)/sign-in');
-  }
-
-  // 매칭 준비 조건 계산
+  // 매칭 준비 — 필수 6조건 (1A 4 + 1B 2). 이상형/제외 설정은 선택.
   const hasBasicInfo = !!(
     profile?.height_cm &&
     profile?.region &&
@@ -53,8 +47,8 @@ export default function HomeScreen() {
       {/* 상단 헤더 */}
       <View style={styles.topBar}>
         <AppText size="lg" weight="semibold">INVI</AppText>
-        <TouchableOpacity onPress={handleSignOut}>
-          <AppText size="sm" variant="secondary">로그아웃</AppText>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/settings')} hitSlop={8}>
+          <AppText size="sm" variant="secondary">설정</AppText>
         </TouchableOpacity>
       </View>
 
@@ -75,11 +69,16 @@ export default function HomeScreen() {
 
             <View style={styles.readyStatus}>
               {isReady ? (
-                <View style={styles.readyBadge}>
-                  <AppText size="sm" weight="semibold" style={styles.readyText}>
-                    매칭 준비 완료
+                <>
+                  <View style={styles.readyBadge}>
+                    <AppText size="sm" weight="semibold" style={styles.readyText}>
+                      매칭 준비 완료
+                    </AppText>
+                  </View>
+                  <AppText size="sm" variant="secondary" style={styles.readyHint}>
+                    이상형·제외 설정을 더하면 더 잘 맞는 인비가 도착해요.
                   </AppText>
-                </View>
+                </>
               ) : (
                 <>
                   <AppText size="sm" variant="secondary" style={styles.missingTitle}>
@@ -124,6 +123,23 @@ export default function HomeScreen() {
                 onPress={() => router.push('/(tabs)/availability')}
               />
             </View>
+
+            {isReady && (
+              <View style={styles.actionRow}>
+                <Button
+                  label="이상형 설정"
+                  variant="secondary"
+                  style={styles.actionBtn}
+                  onPress={() => router.push('/(tabs)/ideal-type')}
+                />
+                <Button
+                  label="제외 설정"
+                  variant="secondary"
+                  style={styles.actionBtn}
+                  onPress={() => router.push('/(tabs)/exclude-org')}
+                />
+              </View>
+            )}
           </View>
         )}
 
@@ -183,6 +199,10 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing[1],
   },
   readyText: { color: '#fff' },
+  readyHint: {
+    marginTop: theme.spacing[2],
+    lineHeight: 20,
+  },
   missingTitle: {
     marginBottom: theme.spacing[1],
   },

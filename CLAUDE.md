@@ -223,7 +223,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...        # 클라이언트 노출 OK (anon)
   - 초기 GUC(`app.dev_mode`) 방식은 로컬 권한 오류로 교체됨 (migration `20260524000001`)
 - 프로필 편집 화면 (기본정보·자기소개·태그·인증), 미리보기 화면, 홈 매칭 준비 안내
 
-### Phase 1B — 코스 등록 + 네이버 장소 검색 + 가용 시간 ✓
+### Phase 1B — 코스 등록 + 네이버 장소 검색 + 가용 시간 `d126ef1` ✓
 - 첫 Edge Function `naver-search`: JWT 검증 + 네이버 키 격리(`Deno.env`), 응답 정제(HTML strip, mapx/mapy → 위경도, 카테고리 매핑)
 - `supabase/functions/.env` 는 `.gitignore` 대상, 메인 `tsconfig` 에서 `supabase/functions/**` exclude (Deno 타입 분리)
 - `src/features/courses/` 모듈: `api.ts`/`hooks.ts`/`types.ts`/`constants.ts` — 코스·장소·가용시간 CRUD 및 검색
@@ -231,7 +231,16 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...        # 클라이언트 노출 OK (anon)
 - 홈 매칭 준비 안내에 공개 코스/가용시간 조건 추가 (총 6조건)
 - 결정 기록: `docs/decisions/edge-function-naver-proxy.md`
 
-### 다음: Phase 1C
-- 이상형 조건 입력 (성별·나이·키·지역·MBTI·흡연/음주/종교 등)
-- 학교/회사 제외 설정 (`org_name_hash` 기반, 평문 비교 금지)
-- Phase 2(매칭 알고리즘 Edge Function) 직전 준비
+### Phase 1C — 이상형 조건 + 학교/회사 제외 설정 + 설정 허브 ✓
+- `update_ideal_type` RPC: **전체 교체(upsert)** 패턴 — `ideal_types` 는 NULL 이 "상관없음" 도메인 값이라 1A 의 partial update 로는 의도 손실. security definer + 범위/enum 검증은 1A 와 동일
+- 잠금 컬럼(school/company/salary/paid_until) 은 RPC `set` 목록에서 명시 제외 — 결제 연동(Phase 2+) 전까지 보존
+- `src/features/match-prefs/` 모듈: `types.ts`/`constants.ts`/`api.ts`/`hooks.ts`
+- 화면: `ideal-type`(범위·칩 + 잠금 카드 3종) · `exclude-org`(학교·회사 제외 토글, 기본 ON) · `settings`(진입 허브 6개 + 로그아웃)
+- 홈 우상단 "로그아웃" → "설정" 으로 교체. 매칭 준비 필수 조건은 6개 그대로(이상형·제외는 선택)
+- phase 명세 문서를 `phase/` 디렉토리로 이동 (root 정리)
+- 결정 기록: `docs/decisions/ideal-types-replace-pattern.md`
+
+### 다음: Phase 2 (매칭 알고리즘)
+- 매칭 Edge Function: Hard Filter(같은 학교/회사 제외 등) → Scoring(코스/시간/거리/이상형/MBTI/매너) → Selection(가중 랜덤 1명)
+- 매일 13시/23시 매칭 배치, 매칭 카드 UI(얼굴·학력·직장 블러)
+- 학력/직장 블러 양방향 공개, 토큰 결제 연동(잠금 조건 해제 포함)

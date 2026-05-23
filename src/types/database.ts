@@ -804,6 +804,18 @@ export type Database = {
         Args: { p_code: string }
         Returns: Json
       }
+      update_ideal_type: {
+        Args: {
+          p_age_min: number | null
+          p_age_max: number | null
+          p_height_min: number | null
+          p_height_max: number | null
+          p_smoking_pref: string | null
+          p_drinking_pref: string | null
+          p_religion_pref: string | null
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
