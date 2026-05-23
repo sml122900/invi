@@ -204,3 +204,34 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...        # 클라이언트 노출 OK (anon)
 - 각 단계는 명세의 "verify" 기준으로 검증한 뒤 다음으로 넘어간다.
 - Phase 범위를 벗어난 기능은 구현하지 않고, 필요하면 먼저 묻는다.
 - 막히거나 명세가 모호하면 추측하지 말고 멈춰서 질문한다. (위 가이드라인 1번)
+
+---
+
+## 진행 상황
+
+### Phase 0 — 인증·온보딩 플로우 `d2bd3e5` ✓
+- Expo SDK 54 다운그레이드 (Expo Go 호환)
+- Supabase Auth 연동: 회원가입 / 로그인 / 세션 게이트
+- DB 트리거 버그 수정: `handle_new_user()` → `profiles` 빈 행 선 삽입 후 `token_balances` 생성
+- `complete_onboarding` RPC (security definer): 성별·생년 저장 + 토큰 지급 원자 처리
+- `private` 스키마 사용 (`vault` → 로컬 Supabase 충돌로 rename)
+
+### Phase 1A — 프로필 본문 + 학교/직장 인증 `3003458` ✓
+- `update_profile` RPC (security definer): 전달 필드만 partial update, enum·길이 검증, completeness 재계산(8체크포인트)
+- `request_org_verification` / `confirm_org_verification` RPC: 도메인 정책, sha256 해시, 5회 시도 제한, 10분 만료
+- 개발 모드 코드 노출: `app_config` 테이블(seed.sql 로컬 전용) → 서버에서만 분기, 클라이언트에 조건 분기 없음
+  - 초기 GUC(`app.dev_mode`) 방식은 로컬 권한 오류로 교체됨 (migration `20260524000001`)
+- 프로필 편집 화면 (기본정보·자기소개·태그·인증), 미리보기 화면, 홈 매칭 준비 안내
+
+### Phase 1B — 코스 등록 + 네이버 장소 검색 + 가용 시간 ✓
+- 첫 Edge Function `naver-search`: JWT 검증 + 네이버 키 격리(`Deno.env`), 응답 정제(HTML strip, mapx/mapy → 위경도, 카테고리 매핑)
+- `supabase/functions/.env` 는 `.gitignore` 대상, 메인 `tsconfig` 에서 `supabase/functions/**` exclude (Deno 타입 분리)
+- `src/features/courses/` 모듈: `api.ts`/`hooks.ts`/`types.ts`/`constants.ts` — 코스·장소·가용시간 CRUD 및 검색
+- 화면: `course-new`(시나리오 5택1 + 이름) · `course-edit`(메타·장소 검색 모달·순서·삭제·공개 토글) · `availability`(요일×슬롯 그리드) · `courses`(목록)
+- 홈 매칭 준비 안내에 공개 코스/가용시간 조건 추가 (총 6조건)
+- 결정 기록: `docs/decisions/edge-function-naver-proxy.md`
+
+### 다음: Phase 1C
+- 이상형 조건 입력 (성별·나이·키·지역·MBTI·흡연/음주/종교 등)
+- 학교/회사 제외 설정 (`org_name_hash` 기반, 평문 비교 금지)
+- Phase 2(매칭 알고리즘 Edge Function) 직전 준비

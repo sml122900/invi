@@ -41,6 +41,21 @@ PostgreSQL GUC(`app.dev_mode`)를 `supabase/seed.sql`에서 로컬 전용으로 
 **Result**
 프로덕션 빌드에서 인증 코드 노출 경로가 서버 레벨에서 차단됨. seed.sql은 로컬 `db reset` 시에만 실행되어 프로덕션 DB에는 GUC가 존재하지 않는 구조로 개발/프로덕션 환경 분리 명확화.
 
+> 후속: 로컬 Supabase `postgres` 역할이 `ALTER DATABASE ... SET` 권한이 없어 `db reset` 시 seed 실행이 실패함. GUC 대신 `public.app_config (key, value)` 테이블 + RLS + security definer RPC 조회 패턴으로 교체. 분기 책임이 여전히 서버에 남는 동일한 보안 모델을 유지하면서 권한 문제 해결.
+
+---
+
+## Edge Function 프록시로 외부 API 키를 클라이언트에서 완전 격리
+
+**Problem**
+React Native 앱에서 네이버 지역 검색 API 를 호출해야 하는데, 네이버는 요청 헤더에 Client ID/Secret 시크릿 한 쌍을 직접 실어 보내는 인증 방식만 제공. 모바일 번들에 키를 넣으면 디컴파일·MITM 으로 추출되어 즉시 유출, 호출자 통제도 불가능. 키 1쌍이 유출되면 회수 방법은 콘솔 재발급뿐.
+
+**Action**
+Supabase Edge Function(Deno 런타임)을 검색 프록시로 도입. 키는 `supabase/functions/.env`(gitignore)에만 존재하고 `Deno.env.get(...)` 으로 런타임 주입. 함수가 `Authorization: Bearer` 헤더의 JWT 를 `supabase.auth.getUser()` 로 검증해 로그인 사용자만 호출 허용. 응답을 우리 도메인 모델(`SearchResult`)로 정제 — HTML 태그 strip, 좌표(`mapx/mapy` × 1e7 → 위경도) 변환, 네이버 카테고리 → 우리 5종 카테고리 자동 매핑. 앱은 `supabase.functions.invoke('naver-search', { body })` 한 줄로 호출.
+
+**Result**
+빌드 산출물·`git ls-files`에서 키 노출 0건. 호출 권한이 인증된 사용자로 한정되어 유출 시에도 abuse 경로가 좁음. 같은 패턴(Edge Function + JWT 검증 + 응답 정제)이 Phase 2+ 의 매칭 알고리즘(service_role 키 필요)·카카오·구글 Places 등 추가 외부 API 에 그대로 재사용 가능한 표준 구조 확립.
+
 ---
 
 ## 템플릿

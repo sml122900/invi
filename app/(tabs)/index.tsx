@@ -1,16 +1,19 @@
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { signOut } from '@/features/auth/api';
 import { useMyProfile, useMyVerifications } from '@/features/profile/hooks';
+import { useMyCourses, useMyAvailableTimes } from '@/features/courses/hooks';
 import { theme } from '@/theme';
 import type { IntroPrompt } from '@/features/profile/types';
 
 export default function HomeScreen() {
   const { profile, loading: profileLoading } = useMyProfile();
   const { verifications, loading: verifLoading } = useMyVerifications();
+  const { courses, loading: coursesLoading } = useMyCourses();
+  const { times, loading: timesLoading } = useMyAvailableTimes();
 
   async function handleSignOut() {
     await signOut();
@@ -27,18 +30,23 @@ export default function HomeScreen() {
     profile?.drinking
   );
   const prompts = (profile?.intro_prompts ?? []) as IntroPrompt[];
-  const hasIntro      = prompts.length >= 3;
-  const hasTags       = (profile?.tags?.length ?? 0) >= 5;
-  const hasVerif      = verifications.length > 0;
-  const isReady       = hasBasicInfo && hasIntro && hasTags && hasVerif;
+  const hasIntro        = prompts.length >= 3;
+  const hasTags         = (profile?.tags?.length ?? 0) >= 5;
+  const hasVerif        = verifications.length > 0;
+  const hasPublicCourse = courses.some(c => c.is_public);
+  const hasAvailability = times.length > 0;
+  const isReady = hasBasicInfo && hasIntro && hasTags && hasVerif &&
+                  hasPublicCourse && hasAvailability;
 
   const missing: string[] = [];
-  if (!hasBasicInfo) missing.push('기본 정보');
-  if (!hasIntro)     missing.push('자기소개 3개');
-  if (!hasTags)      missing.push('취향 태그 5개');
-  if (!hasVerif)     missing.push('학교/직장 인증');
+  if (!hasBasicInfo)     missing.push('기본 정보');
+  if (!hasIntro)         missing.push('자기소개 3개');
+  if (!hasTags)          missing.push('취향 태그 5개');
+  if (!hasVerif)         missing.push('학교/직장 인증');
+  if (!hasPublicCourse)  missing.push('공개 코스 1개');
+  if (!hasAvailability)  missing.push('가용 시간 설정');
 
-  const isLoading = profileLoading || verifLoading;
+  const isLoading = profileLoading || verifLoading || coursesLoading || timesLoading;
 
   return (
     <View style={styles.container}>
@@ -50,8 +58,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 메인 영역 */}
-      <View style={styles.main}>
+      <ScrollView contentContainerStyle={styles.scrollBody}>
         <AppText size="xl" weight="semibold" style={styles.headline}>
           오늘의 인비는{'\n'}곧 도착해요
         </AppText>
@@ -59,10 +66,8 @@ export default function HomeScreen() {
           매일 오전 1시, 오후 11시에 새로운 인연을 전해드려요.
         </AppText>
 
-        {/* 매칭 준비 상태 */}
         {!isLoading && profile && (
           <View style={styles.readyCard}>
-            {/* 완성도 바 */}
             <ProgressBar
               progress={profile.completeness ?? 0}
               label="프로필 완성도"
@@ -104,6 +109,21 @@ export default function HomeScreen() {
                 />
               )}
             </View>
+
+            <View style={styles.actionRow}>
+              <Button
+                label={hasPublicCourse ? '내 코스' : '코스 만들기'}
+                variant={hasPublicCourse ? 'secondary' : 'primary'}
+                style={styles.actionBtn}
+                onPress={() => router.push('/(tabs)/courses')}
+              />
+              <Button
+                label={hasAvailability ? '가용 시간' : '가용 시간 설정'}
+                variant={hasAvailability ? 'secondary' : 'primary'}
+                style={styles.actionBtn}
+                onPress={() => router.push('/(tabs)/availability')}
+              />
+            </View>
           </View>
         )}
 
@@ -112,7 +132,7 @@ export default function HomeScreen() {
             불러오는 중...
           </AppText>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -130,9 +150,10 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing[12],
     paddingBottom: theme.spacing[4],
   },
-  main: {
-    flex: 1,
+  scrollBody: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing[5],
+    paddingBottom: theme.spacing[10],
     justifyContent: 'center',
   },
   headline: {
