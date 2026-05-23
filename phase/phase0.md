@@ -124,7 +124,8 @@ DB(로컬)·인증·디자인 시스템·네비게이션의 골격을 세운다.
    (start 시 자동 적용되지만, reset 으로 마이그레이션 기준 재구축을 확정한다)
 
 **verify:** Studio URL 을 브라우저로 열어 `public` 스키마에 테이블 17개와,
-`vault` 스키마에 `verifications` 가 보인다. RLS 가 켜져 있다.
+`private` 스키마에 `verifications` 가 보인다. RLS 가 켜져 있다.
+(초기 설계는 `vault` 였으나 로컬 Supabase 충돌로 `private` 로 rename됨)
 
 ## Step 3. 의존성 설치
 

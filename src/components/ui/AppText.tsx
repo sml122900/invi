@@ -1,4 +1,4 @@
-import { Text, TextStyle, StyleSheet, TextProps } from 'react-native';
+import { Text, StyleSheet, TextProps } from 'react-native';
 import { theme } from '@/theme';
 
 interface AppTextProps extends TextProps {

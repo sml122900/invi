@@ -84,7 +84,7 @@ export default function CourseEditScreen() {
     const b = list[targetIdx];
     setBusyPlaceId(place.id);
     try {
-      await reorderPlaces([
+      await reorderPlaces(course.id, [
         { id: a.id, order_index: b.order_index },
         { id: b.id, order_index: a.order_index },
       ]);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View, StyleSheet, TouchableOpacity, Alert, Switch, ActivityIndicator,
 } from 'react-native';
@@ -14,8 +14,6 @@ export default function ExcludeOrgScreen() {
   const excludeSchool  = settings?.exclude_same_school  ?? true;
   const excludeCompany = settings?.exclude_same_company ?? true;
   const [busy, setBusy] = useState<'school' | 'company' | null>(null);
-
-  useEffect(() => { /* settings 가 바뀌면 자동 반영 */ }, [settings]);
 
   async function toggle(field: 'exclude_same_school' | 'exclude_same_company') {
     const current = field === 'exclude_same_school' ? excludeSchool : excludeCompany;

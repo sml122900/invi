@@ -2,13 +2,14 @@
 -- INVI — 소개팅 앱 DB 스키마 (Supabase / PostgreSQL)
 -- ============================================================================
 -- 설계 원칙
---   1. 인증 정보(vault 스키마)와 활동 정보(public 스키마)를 물리적으로 분리한다.
---   2. vault 스키마는 service_role 만 접근 가능하다. (RLS 완전 잠금)
+--   1. 인증 정보(private 스키마)와 활동 정보(public 스키마)를 물리적으로 분리한다.
+--      (초기 명칭은 vault 였으나 로컬 Supabase 충돌로 private 로 rename됨)
+--   2. private 스키마는 service_role 만 접근 가능하다. (RLS 완전 잠금)
 --   3. 학교/회사 "같은 조직 제외" 비교는 org_name 평문이 아니라 해시로만 한다.
 --   4. 다른 사용자의 프로필 노출은 매칭 Edge Function(service_role)이
 --      가공(블러 등)해서 내려준다. 클라이언트가 타인 프로필을 직접 읽지 못한다.
 --
--- ⚠️ 중요: vault.* 테이블은 public.* 테이블과 절대 직접 JOIN 하지 않는다.
+-- ⚠️ 중요: private.* 테이블은 public.* 테이블과 절대 직접 JOIN 하지 않는다.
 --          연결은 오직 user_id(UUID) 로만, 그리고 service_role 컨텍스트에서만.
 -- ============================================================================
 
@@ -29,6 +30,7 @@ $$;
 
 -- ============================================================================
 -- 1. 격리 스키마 (인증 정보) — service_role 전용
+-- (초기 명칭 vault → 로컬 Supabase 충돌로 private 로 rename. 의미는 동일)
 -- ============================================================================
 create schema if not exists private;
 
@@ -51,7 +53,7 @@ create table private.verifications (
 create index idx_verifications_user     on private.verifications(user_id);
 create index idx_verifications_org_hash on private.verifications(org_name_hash);
 
--- vault 완전 잠금: 정책을 만들지 않음 = 일반 사용자 전면 거부.
+-- private 완전 잠금: 정책을 만들지 않음 = 일반 사용자 전면 거부.
 -- service_role 은 RLS 를 우회하므로 Edge Function 에서만 접근 가능.
 alter table private.verifications enable row level security;
 
@@ -562,6 +564,6 @@ grant  execute on function public.complete_onboarding(text, int) to authenticate
 -- ============================================================================
 -- 끝. 다음 단계
 --   - Edge Function: 매칭 배치(Hard Filter → Scoring → Selection)
---   - Edge Function: 같은 조직 제외(vault.org_name_hash 비교, service_role)
+--   - Edge Function: 같은 조직 제외(private.verifications.org_name_hash 비교, service_role)
 --   - Edge Function: 매칭 카드 조립(타인 프로필 블러 처리 후 클라이언트로 전달)
 -- ============================================================================

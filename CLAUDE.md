@@ -151,8 +151,9 @@ invi/
 
 이 프로젝트의 신뢰는 보안에서 나온다. 아래는 타협 불가.
 
-- **인증 DB(`vault.*`)와 활동 DB(`public.*`)를 절대 직접 JOIN 하지 않는다.**
+- **인증 DB(`private.*`)와 활동 DB(`public.*`)를 절대 직접 JOIN 하지 않는다.**
   연결은 `user_id`(UUID)로만, service_role 컨텍스트(Edge Function)에서만.
+  (초기 설계는 `vault.*` 스키마였으나 로컬 Supabase 충돌로 Phase 0 에서 `private.*` 로 rename됨)
 - **같은 학교/회사 제외는 평문이 아니라 `org_name_hash`(sha256)로만 비교.**
   조직명 평문을 매칭 로직에 끌어오지 않는다.
 - **타인 프로필을 클라이언트가 직접 읽지 않는다.** 매칭 카드의 상대 정보는
@@ -239,6 +240,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...        # 클라이언트 노출 OK (anon)
 - 홈 우상단 "로그아웃" → "설정" 으로 교체. 매칭 준비 필수 조건은 6개 그대로(이상형·제외는 선택)
 - phase 명세 문서를 `phase/` 디렉토리로 이동 (root 정리)
 - 결정 기록: `docs/decisions/ideal-types-replace-pattern.md`
+- 후속 hotfix(Phase 2 진입 전 코드 리뷰): `reorder_places` / `set_available_times` 를 security definer RPC 로 일원화(원자성·본인 소유 검증), `update_ideal_type` 시그니처 보정(default null), `schema.sql` REFERENCE 헤더 추가, vault→private 잔존 문서 갱신, database.ts 자동 재생성. 결정 기록: `docs/decisions/migration-immutability.md`
 
 ### 다음: Phase 2 (매칭 알고리즘)
 - 매칭 Edge Function: Hard Filter(같은 학교/회사 제외 등) → Scoring(코스/시간/거리/이상형/MBTI/매너) → Selection(가중 랜덤 1명)

@@ -89,12 +89,15 @@ export async function deletePlace(id: string): Promise<void> {
   if (error) throw error
 }
 
-export async function reorderPlaces(updates: { id: string; order_index: number }[]): Promise<void> {
-  await Promise.all(
-    updates.map(({ id, order_index }) =>
-      supabase.from('places').update({ order_index }).eq('id', id)
-    )
-  )
+export async function reorderPlaces(
+  courseId: string,
+  updates: { id: string; order_index: number }[]
+): Promise<void> {
+  const { error } = await supabase.rpc('reorder_places', {
+    p_course_id:   courseId,
+    p_order_pairs: updates,
+  })
+  if (error) throw error
 }
 
 export async function getMyAvailableTimes(): Promise<AvailableTime[]> {
@@ -109,16 +112,8 @@ export async function getMyAvailableTimes(): Promise<AvailableTime[]> {
 export async function setAvailableTimes(
   times: { day_of_week: number; slot: string }[]
 ): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('not_authenticated')
-  const { error: delErr } = await supabase
-    .from('available_times')
-    .delete()
-    .eq('user_id', user.id)
-  if (delErr) throw delErr
-  if (times.length === 0) return
-  const { error: insErr } = await supabase
-    .from('available_times')
-    .insert(times.map(t => ({ ...t, user_id: user.id })))
-  if (insErr) throw insErr
+  const { error } = await supabase.rpc('set_available_times', {
+    p_slots: times,
+  })
+  if (error) throw error
 }

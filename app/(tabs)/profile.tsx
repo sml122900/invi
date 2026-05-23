@@ -20,7 +20,7 @@ import type { FaceType, FrequencyLevel, ReligionType, IntroPrompt } from '@/feat
 
 export default function ProfileScreen() {
   const { profile, loading, reload } = useMyProfile();
-  const { verifications, reload: reloadVerif } = useMyVerifications();
+  const { verifications } = useMyVerifications();
 
   // ── 기본 정보 state
   const [heightText, setHeightText] = useState('');
